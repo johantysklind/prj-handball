@@ -1,0 +1,171 @@
+openapi: 3.1.0
+info:
+  title: Handball Match Analytics API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+paths:
+  /api/matches/{matchId}/summary:
+    get:
+      summary: Get match summary
+      parameters:
+        - in: path
+          name: matchId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Match summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/MatchSummary'
+                required: [data]
+        '404':
+          description: Match not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /api/matches/{matchId}/timeline:
+    get:
+      summary: Get event timeline
+      parameters:
+        - in: path
+          name: matchId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            default: 25
+        - in: query
+          name: team
+          schema:
+            type: string
+            enum: [home, away]
+        - in: query
+          name: eventType
+          schema:
+            type: string
+            enum: [goal, pass]
+      responses:
+        '200':
+          description: Timeline events ordered by timestamp
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TimelineResponse'
+                required: [data]
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Match not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+components:
+  schemas:
+    MatchSummary:
+      type: object
+      properties:
+        matchId:
+          type: string
+        processingStatus:
+          type: string
+          enum: [pending, processing, completed, failed]
+        goals:
+          $ref: '#/components/schemas/TeamTotals'
+        passTotals:
+          $ref: '#/components/schemas/TeamTotals'
+      required: [matchId, processingStatus, goals, passTotals]
+    TeamTotals:
+      type: object
+      properties:
+        home:
+          type: integer
+        away:
+          type: integer
+        total:
+          type: integer
+      required: [home, away, total]
+    TimelineEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        eventType:
+          type: string
+          enum: [goal, pass]
+        team:
+          type: string
+          enum: [home, away]
+        player:
+          type: string
+      required: [id, timestamp, eventType, team, player]
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalItems:
+          type: integer
+        totalPages:
+          type: integer
+        hasPrevious:
+          type: boolean
+        hasNext:
+          type: boolean
+      required: [page, pageSize, totalItems, totalPages, hasPrevious, hasNext]
+    TimelineResponse:
+      type: object
+      properties:
+        matchId:
+          type: string
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimelineEvent'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+      required: [matchId, events, pagination]
+    ErrorEnvelope:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              nullable: true
+          required: [code, message, details]
+      required: [error]
